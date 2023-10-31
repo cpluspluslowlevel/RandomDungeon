@@ -9,8 +9,6 @@ namespace RandomDungeon.Framework
     public class Framework
     {
 
-        public Data.User userData => m_userDataFile.dataObject;
-
         #region Singleton
         //Singleton
 
@@ -20,13 +18,16 @@ namespace RandomDungeon.Framework
 
         private Framework()
         {
-            Initialize();
         }
 
         ///////////////////////////////////////////////////
         #endregion
 
-        private void Initialize()
+
+        public Data.User userData => m_userDataFile.dataObject;
+
+
+        public void Initialize()
         {
 
             m_userDataFile.Load();
