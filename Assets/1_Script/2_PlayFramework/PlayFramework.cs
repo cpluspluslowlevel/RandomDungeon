@@ -14,9 +14,9 @@ public class PlayGameManager : MonoBehaviour
         
     }
 
-    // Update is called once per frame
     void Update()
     {
         
     }
+
 }

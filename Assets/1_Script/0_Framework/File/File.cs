@@ -1,31 +1,24 @@
+using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
+using Unity.VisualScripting;
 using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
 
 namespace RandomDungeon.File
 {
-
-    public abstract class File
-    {
-
-        public abstract bool Save();
-
-        public abstract bool Load();
-
-    }
-
-    public class JSONFile<T> : File
+    public abstract class File<T>
     {
 
         public T dataObject => m_dataObject;
 
         public string filePath { get; }
 
-
-
-        public JSONFile(string filePath, T dataObject)
+        public File(string filePath, T dataObject)
         {
 
             this.m_dataObject   = dataObject;
@@ -39,6 +32,33 @@ namespace RandomDungeon.File
 
         }
 
+
+
+        public abstract bool Save();
+
+        public abstract bool Load();
+
+
+
+
+        protected T m_dataObject = default(T);
+
+
+    }
+
+    public class JSONFile<T> : File<T>
+    {
+
+
+        public JSONFile(string filePath, T dataObject) : base(filePath, dataObject)
+        {
+        }
+
+
+
+        #region File override
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        //File override
 
         public override bool Save()
         {
@@ -62,36 +82,70 @@ namespace RandomDungeon.File
 
         }
 
-        private T m_dataObject = default(T);
+        //File override
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        #endregion
 
     }
 
-    public class CSV
+    public class CSVFile<T> : File<List<T>> where T : new()
     {
 
-        public static List<List<string>> ParseCSV(string path)
+        public CSVFile(string filePath, List<T> dataObjectList) : base(filePath, dataObjectList)
+        {
+        }
+
+        #region File override
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        //File override
+
+        public override bool Save()
+        {
+            return true;
+        }
+
+        public override bool Load()
         {
 
-            List<List<string>> result = new List<List<string>>();
-
-            StreamReader reader = new StreamReader(path);
-            while (!reader.EndOfStream)
+            var columnTypeList  = new List<KeyValuePair<string, FieldInfo>>();
+            var line            = string.Empty;
+            using (var reader = new StreamReader(filePath))
             {
 
-                result.Add(new List<string>());
-                
-                var     line        = reader.ReadLine();
-                var     tokenArray  = line.Split(",");
-                foreach(var token in tokenArray)
+                //첫 번째 행에서 열 이름과 타입 정보를 가져옵니다.
+                line = reader.ReadLine();
+                foreach(var name in line.Split(","))
                 {
-                    result.Last().Add(token);
+                    columnTypeList.Add(new KeyValuePair<string, FieldInfo>(name, typeof(T).GetField(name)));
+                }
+
+                //나머지 행을 읽어 데이터를 가져옵니다.
+                while(!reader.EndOfStream)
+                {
+
+                    line            = reader.ReadLine();
+                    var tokenList   = line.Split(",");
+
+                    //행의 각 열에 해당하는 타입 정보를 이용해 토큰을 변환해 값을 넣습니다. 
+                    var data = new T();
+                    for (int i = 0; i < columnTypeList.Count; ++i)
+                    {
+                        columnTypeList[i].Value.SetValue(data, Convert.ChangeType(tokenList[i], columnTypeList[i].Value.FieldType));
+                    }
+                    dataObject.Add(data);
+
                 }
 
             }
 
-            return result;
+            return true;
 
         }
+
+        //File override
+        ///////////////////////////////////////////////////////////////////////////////////////////////////
+        #endregion
+
 
     }
 
